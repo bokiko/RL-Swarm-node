@@ -1,205 +1,224 @@
-Complete Guide to Install RL Swarm Node on Your Mini PC (No GPU)
+# Complete Guide to Install RL Swarm Node on Mini PC (No GPU Required)
 
-Prerequisites
-Hardware: Mini PC with at least 4GB RAM and a decent CPU (e.g., Intel i3 or equivalent). No GPU required.
-OS: Debian/Ubuntu-based Linux (confirmed by your error messages).
-Internet: Stable connection for cloning the repo and swarm participation.
-User: You’re logged in as bokiko (non-root).
+## What is RL Swarm?
 
-Step 1: Update Your System
+RL Swarm is a decentralized network designed for training reinforcement learning agents using distributed computing power. It's part of the Gensyn protocol, which allows anyone to contribute computational resources to AI training in exchange for rewards.
 
-Ensure your system is up to date to avoid compatibility issues.
-Open a terminal and run:
-bash
+- **Official Website**: [https://gensyn.ai](https://gensyn.ai)
+- **GitHub Repository**: [https://github.com/gensyn-ai/rl-swarm](https://github.com/gensyn-ai/rl-swarm)
+- **Documentation**: [https://docs.gensyn.ai](https://docs.gensyn.ai)
 
+### Why Run an RL Swarm Node?
 
+- **Participate in AI Development**: Contribute to cutting-edge reinforcement learning without needing expensive hardware
+- **Potential Rewards**: Earn rewards for contributing computational resources (subject to network incentive structures)
+- **Repurpose Hardware**: Give new life to mini PCs or older hardware
+- **Learn About Decentralized AI**: Get hands-on experience with the emerging field of decentralized AI infrastructure
+
+### Node Requirements
+
+RL Swarm is designed to be resource-efficient. Unlike many AI workloads, reinforcement learning can be effectively run on CPU-only setups, making it perfect for mini PCs and other modest hardware configurations.
+
+This guide will walk you through setting up an RL Swarm node on a mini PC without a GPU. Perfect for repurposing older hardware while participating in the Gensyn network.
+
+## Prerequisites
+
+- **Hardware**: Mini PC with at least 4GB RAM and a decent CPU (Intel i3 or equivalent)
+- **OS**: Debian/Ubuntu-based Linux
+- **Internet**: Stable connection for repository access and swarm participation
+- **User**: Non-root user with sudo privileges
+
+## Installation Guide
+
+### Step 1: Update Your System
+
+Ensure your system is up to date:
+
+```bash
 sudo apt update && sudo apt upgrade -y
+```
 
-Step 2: Install Required Tools
+### Step 2: Install Required Tools
 
-Install the essential software for RL Swarm: Git, Python, Docker, and Docker Compose.
-Install Git:
-bash
-
-
+#### Install Git:
+```bash
 sudo apt install git -y
-Install Python 3 and pip:
-bash
+```
 
+#### Install Python and dependencies:
+```bash
+sudo apt install python3 python3-pip python3-venv -y
+```
 
-sudo apt install python3 python3-pip -y
-Verify: python3 --version (should be 3.6+).
-Install Python venv (for virtual environments):
-bash
-
-
-sudo apt install python3-venv -y
-Install Docker:
-bash
-
-
+#### Install Docker:
+```bash
 sudo apt install docker.io -y
-Start and enable Docker:
-bash
+sudo systemctl start docker
+sudo systemctl enable docker
+sudo usermod -aG docker $USER
+```
 
-
-sudo systemctl start docker sudo systemctl enable docker
-Add bokiko to the docker group:
-bash
-
-
-sudo usermod -aG docker bokiko
-Install Docker Compose:
-bash
-
-
+#### Install Docker Compose:
+```bash
 sudo apt install docker-compose -y
-Apply Group Changes:
-Log out and back in:
-bash
+```
 
-
-exit
-Then reconnect (e.g., via SSH or terminal login).
-Or use this temporary fix:
-bash
-
-
+#### Apply group changes:
+Either log out and back in, or use this temporary fix:
+```bash
 newgrp docker
-Verify Docker Access:
-bash
+```
 
-
+#### Verify Docker access:
+```bash
 docker ps
-If you see a list of containers (likely empty) and no permission denied error, you’re set. If you get a permission error, fix the socket:
-bash
+```
 
+If you see permission errors, fix the socket permissions:
+```bash
+sudo chown root:docker /var/run/docker.sock
+sudo chmod 660 /var/run/docker.sock
+```
 
-sudo chown root:docker /var/run/docker.sock sudo chmod 660 /var/run/docker.sock
-Then retry docker ps.
+### Step 3: Clone the RL Swarm Repository
 
-Step 3: Clone the RL Swarm Repository
-
-Download the RL Swarm code from GitHub.
-Navigate to your home directory:
-bash
-
-
+```bash
 cd $HOME
-Clone the repo:
-bash
-
-
 git clone https://github.com/gensyn-ai/rl-swarm.git
-Enter the directory:
-bash
-
-
 cd rl-swarm
+```
 
-Step 4: Set Up a Virtual Environment (Optional)
+### Step 4: Set Up a Virtual Environment (Optional)
 
-This isolates Python dependencies, though Docker handles most of the setup.
-Create the virtual environment:
-bash
-
-
+```bash
 python3 -m venv .venv
-Activate it:
-bash
-
-
 source .venv/bin/activate
-Your prompt should change to (.venv) bokiko@Bitcoin-Node:~/rl-swarm$.
-Install Python dependencies (if applicable):
-bash
+```
 
-
+Install dependencies if needed:
+```bash
 pip3 install -r requirements.txt
-If requirements.txt doesn’t exist, skip this—it’s not critical for Docker-based setup.
-Deactivate when done (optional):
-bash
+```
 
+### Step 5: Configure for CPU-Only Use
 
-deactivate
-
-Step 5: Configure for CPU-Only Use
-
-Since your mini PC has no GPU, ensure the setup defaults to CPU.
-Check docker-compose.yml:
-bash
-
-
+Edit the Docker Compose file to ensure CPU-only operation:
+```bash
 nano docker-compose.yml
-Look for GPU-related lines (e.g., devices or nvidia). Comment them out with # if present:
-yaml
+```
 
+Comment out any GPU-related lines with `#` if present:
+```yaml
+# devices:
+#   - /dev/nvidia0:/dev/nvidia0
+```
 
-# devices: # - /dev/nvidia0:/dev/nvidia0
-Save and exit: Ctrl+O, Enter, Ctrl+X.
+Save and exit: `Ctrl+O`, `Enter`, `Ctrl+X`
 
-Step 6: Launch the RL Swarm Node
+### Step 6: Launch the RL Swarm Node
 
-Start the node using Docker Compose.
-Build and run:
-bash
-
-
+```bash
 docker-compose up --build
-This builds the containers and starts the node. It may take a few minutes the first time.
-If you get a permission denied error, use:
-bash
+```
 
+This builds the containers and starts the node. The first run may take several minutes.
 
-sudo docker-compose up --build
-But ideally, Step 2’s permission fixes should make sudo unnecessary.
-Watch the logs in the terminal for startup messages (e.g., container creation, swarm connection).
+### Step 7: Access the Swarm UI
 
-Step 7: Access the Swarm UI
+Open a browser and navigate to:
+- Local access: `http://localhost:8080`
+- Remote access: `http://<mini-pc-ip>:8080`
 
-Monitor your node via the web interface.
-Open a browser on your mini PC (or another device on the same network).
-Go to: http://localhost:8080
-If accessing remotely, use http://<mini-pc-ip>:8080 (find your IP with ip addr show).
-If it doesn’t load, check the terminal logs for errors.
+To find your IP address:
+```bash
+ip addr show
+```
 
-Step 8: Connect to the Gensyn Testnet (Optional)
+### Step 8: Set Up for Automatic Start on Boot (Optional)
 
-To fully participate in the swarm:
-Follow the "Connecting to the Gensyn Testnet" section in the GitHub README (scroll down on the repo page).
-You may need to configure an on-chain identity—check the logs or README for details.
+Create a systemd service file:
+```bash
+sudo nano /etc/systemd/system/rl-swarm.service
+```
 
-Step 9: Stop and Restart (As Needed)
-Stop the node: Press Ctrl+C in the terminal, then:
-bash
+Add the following content:
+```
+[Unit]
+Description=RL Swarm Node
+After=network.target docker.service
+Requires=docker.service
 
+[Service]
+Type=simple
+User=$USER
+WorkingDirectory=/home/$USER/rl-swarm
+ExecStart=/usr/bin/tmux new-session -d -s rl-swarm 'docker-compose up'
+ExecStop=/usr/bin/tmux send-keys -t rl-swarm C-c && /usr/bin/tmux send-keys -t rl-swarm 'docker-compose down' Enter
+Restart=on-failure
 
+[Install]
+WantedBy=multi-user.target
+```
+
+Enable and start the service:
+```bash
+sudo systemctl enable rl-swarm.service
+sudo systemctl start rl-swarm.service
+```
+
+### Step 9: Stop and Restart (As Needed)
+
+To stop the node:
+```bash
 docker-compose down
-Restart later: From ~/rl-swarm, run:
-bash
+```
 
-
+To restart:
+```bash
 docker-compose up
+```
 
-Troubleshooting
-Docker Permission Denied:
-Check: docker ps
-Fix: sudo usermod -aG docker bokiko, then newgrp docker or log out/in.
-Last resort: sudo chown root:docker /var/run/docker.sock.
-Port Conflict:
-If 8080 is in use: sudo lsof -i :8080, kill the process (sudo kill <PID>), or edit docker-compose.yml to use another port (e.g., 8081).
-Resource Issues:
-Check usage: top
-If your Bitcoin node is running, it might compete for CPU/memory. Stop it temporarily if needed: sudo systemctl stop bitcoind (adjust service name as applicable).
-Missing Files:
-Ensure docker-compose.yml exists in ~/rl-swarm (ls -l). If not, re-clone the repo.
+## Troubleshooting
 
-Final Verification
-Docker works: docker ps shows no errors.
-Node runs: docker-compose up --build starts without permission issues.
-UI loads: http://localhost:8080 displays the Swarm interface.
+### Docker Permission Issues
+If you see "permission denied" errors:
+```bash
+sudo usermod -aG docker $USER
+newgrp docker
+```
 
-Notes for Your Setup
-Bitcoin-Node: If this mini PC is dedicated to a Bitcoin node, ensure it has enough resources (CPU/RAM) for both. RL Swarm is lightweight, but a busy Bitcoin node could slow it down.
-No GPU: The setup defaults to CPU, so you’re good there.
-Persistence: After a reboot, re-run docker-compose up in ~/rl-swarm to restart the node.
+### Port Conflicts
+If port 8080 is already in use:
+```bash
+sudo lsof -i :8080
+```
+Then either kill the process or edit `docker-compose.yml` to use a different port.
+
+### Resource Monitoring
+Check system resource usage:
+```bash
+top
+```
+
+### Missing Files
+Ensure all required files exist:
+```bash
+ls -l ~/rl-swarm
+```
+If anything is missing, re-clone the repository.
+
+## Final Verification
+
+- Docker works: `docker ps` shows no errors
+- Node runs: `docker-compose up --build` starts without issues
+- UI loads: `http://localhost:8080` displays the Swarm interface
+
+## Notes
+
+- This setup is optimized for CPU-only operation, making it perfect for mini PCs
+- If running alongside other services like Bitcoin nodes, ensure you have sufficient resources
+- After a reboot, if not using the systemd service, you'll need to manually restart with `docker-compose up`
+
+---
+
+*Guide published by bokiko | Discord: [Join our community](https://discord.gg/bokiko)*
