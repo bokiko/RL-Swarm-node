@@ -221,4 +221,4 @@ If anything is missing, re-clone the repository.
 
 ---
 
-*Guide published by bokiko | Discord: [Join our community](https://discord.gg/bokiko)*
+*Guide published by bokiko | Twitter: [Join our community](https://x.com/bokiko_io)*
