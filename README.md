@@ -2,7 +2,7 @@
 
 ## What is RL Swarm?
 
-RL Swarm is a decentralized network designed for training reinforcement learning agents using distributed computing power. It's part of the Gensyn protocol, which allows anyone to contribute computational resources to AI training in exchange for rewards.
+RL Swarm is a decentralized network for training reinforcement learning models, part of the Gensyn protocol ecosystem. The network enables users to contribute computing resources to train AI systems collaboratively.
 
 - **Official Website**: [https://gensyn.ai](https://gensyn.ai)
 - **GitHub Repository**: [https://github.com/gensyn-ai/rl-swarm](https://github.com/gensyn-ai/rl-swarm)
@@ -10,16 +10,18 @@ RL Swarm is a decentralized network designed for training reinforcement learning
 
 ### Why Run an RL Swarm Node?
 
-- **Participate in AI Development**: Contribute to cutting-edge reinforcement learning without needing expensive hardware
-- **Potential Rewards**: Earn rewards for contributing computational resources (subject to network incentive structures)
-- **Repurpose Hardware**: Give new life to mini PCs or older hardware
-- **Learn About Decentralized AI**: Get hands-on experience with the emerging field of decentralized AI infrastructure
+- **Participate in AI Development**: Contribute to decentralized AI training
+- **Earn Rewards**: Potentially earn tokens for providing computational resources (when mainnet launches)
+- **Repurpose Hardware**: Put idle computing resources to productive use
+- **Join the Community**: Be part of an innovative decentralized AI infrastructure
 
-### Node Requirements
+### Hardware Requirements
 
-RL Swarm is designed to be resource-efficient. Unlike many AI workloads, reinforcement learning can be effectively run on CPU-only setups, making it perfect for mini PCs and other modest hardware configurations.
-
-This guide will walk you through setting up an RL Swarm node on a mini PC without a GPU. Perfect for repurposing older hardware while participating in the Gensyn network.
+- **CPU**: Any x86_64 processor (Intel/AMD) with 2+ cores
+- **RAM**: Minimum 4GB (8GB+ recommended)
+- **Storage**: At least 10GB free space
+- **Network**: Stable internet connection
+- **GPU**: Not required (this guide focuses on CPU-only setup)
 
 ## Prerequisites
 
@@ -38,17 +40,9 @@ Ensure your system is up to date:
 sudo apt update && sudo apt upgrade -y
 ```
 
-### Step 2: Install Required Tools
+### Step 2: Install Docker and Docker Compose
 
-#### Install Git:
-```bash
-sudo apt install git -y
-```
-
-#### Install Python and dependencies:
-```bash
-sudo apt install python3 python3-pip python3-venv -y
-```
+RL Swarm runs in Docker containers, so we need to install Docker and Docker Compose:
 
 #### Install Docker:
 ```bash
@@ -88,44 +82,48 @@ git clone https://github.com/gensyn-ai/rl-swarm.git
 cd rl-swarm
 ```
 
-### Step 4: Set Up a Virtual Environment (Optional)
+### Step 4: Configure the Node
+
+Create a `.env` file to configure your node:
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
+nano .env
 ```
 
-Install dependencies if needed:
-```bash
-pip3 install -r requirements.txt
+Add the following content (adjusting values as needed):
+
 ```
-
-### Step 5: Configure for CPU-Only Use
-
-Edit the Docker Compose file to ensure CPU-only operation:
-```bash
-nano docker-compose.yml
-```
-
-Comment out any GPU-related lines with `#` if present:
-```yaml
-# devices:
-#   - /dev/nvidia0:/dev/nvidia0
+# Node Configuration
+NODE_NAME=my-rl-swarm-node
+# CPU Limit (optional, remove to use all cores)
+CPU_LIMIT=4
+# If you're on CPU only, set to false
+GPU_ENABLED=false
 ```
 
 Save and exit: `Ctrl+O`, `Enter`, `Ctrl+X`
 
-### Step 6: Launch the RL Swarm Node
+### Step 5: Launch the RL Swarm Node
+
+Start the containers with Docker Compose:
 
 ```bash
-docker-compose up --build
+docker-compose up -d
 ```
 
-This builds the containers and starts the node. The first run may take several minutes.
+This runs the containers in detached mode (in the background).
 
-### Step 7: Access the Swarm UI
+To view the logs:
+```bash
+docker-compose logs -f
+```
 
-Open a browser and navigate to:
+Press `Ctrl+C` to exit the logs view while keeping the containers running.
+
+### Step 6: Access the Web Interface
+
+The RL Swarm node provides a web interface for monitoring and management:
+
 - Local access: `http://localhost:8080`
 - Remote access: `http://<mini-pc-ip>:8080`
 
@@ -134,7 +132,7 @@ To find your IP address:
 ip addr show
 ```
 
-### Step 8: Set Up for Automatic Start on Boot (Optional)
+### Step 7: Set Up for Automatic Start on Boot
 
 Create a systemd service file:
 ```bash
@@ -152,8 +150,8 @@ Requires=docker.service
 Type=simple
 User=$USER
 WorkingDirectory=/home/$USER/rl-swarm
-ExecStart=/usr/bin/tmux new-session -d -s rl-swarm 'docker-compose up'
-ExecStop=/usr/bin/tmux send-keys -t rl-swarm C-c && /usr/bin/tmux send-keys -t rl-swarm 'docker-compose down' Enter
+ExecStart=/usr/bin/docker-compose up
+ExecStop=/usr/bin/docker-compose down
 Restart=on-failure
 
 [Install]
@@ -166,16 +164,31 @@ sudo systemctl enable rl-swarm.service
 sudo systemctl start rl-swarm.service
 ```
 
-### Step 9: Stop and Restart (As Needed)
+### Step 8: Managing Your Node
 
 To stop the node:
 ```bash
+cd ~/rl-swarm
 docker-compose down
 ```
 
-To restart:
+To start again manually:
 ```bash
-docker-compose up
+cd ~/rl-swarm
+docker-compose up -d
+```
+
+To check status:
+```bash
+docker-compose ps
+```
+
+To update to the latest version:
+```bash
+cd ~/rl-swarm
+git pull
+docker-compose down
+docker-compose up -d
 ```
 
 ## Troubleshooting
@@ -194,31 +207,56 @@ sudo lsof -i :8080
 ```
 Then either kill the process or edit `docker-compose.yml` to use a different port.
 
-### Resource Monitoring
+### Container Not Starting
+Check docker logs for errors:
+```bash
+docker-compose logs
+```
+
+### Resource Issues
 Check system resource usage:
 ```bash
-top
+htop
 ```
+(Install with `sudo apt install htop` if not available)
 
-### Missing Files
-Ensure all required files exist:
+### Network Connectivity
+Make sure your node can connect to the internet:
 ```bash
-ls -l ~/rl-swarm
+curl -I https://api.gensyn.ai
 ```
-If anything is missing, re-clone the repository.
 
-## Final Verification
+## Optimizing Your Node
 
-- Docker works: `docker ps` shows no errors
-- Node runs: `docker-compose up --build` starts without issues
-- UI loads: `http://localhost:8080` displays the Swarm interface
+### CPU Performance
+For better performance, you can adjust the CPU allocation in your `.env` file:
+```
+CPU_LIMIT=4  # Set to number of cores you want to dedicate
+```
 
-## Notes
+### Resource Monitoring
+Install and use Glances for comprehensive monitoring:
+```bash
+sudo apt install glances
+glances
+```
 
-- This setup is optimized for CPU-only operation, making it perfect for mini PCs
-- If running alongside other services like Bitcoin nodes, ensure you have sufficient resources
-- After a reboot, if not using the systemd service, you'll need to manually restart with `docker-compose up`
+### Managing Disk Space
+Docker can consume space over time. Clean up occasionally:
+```bash
+docker system prune -a
+```
+
+## Additional Resources
+
+- Join the [Gensyn Discord](https://discord.gg/gensyn) for community support
+- Check the [official documentation](https://docs.gensyn.ai) for updates
+- Follow Gensyn on [Twitter](https://twitter.com/gensyn_ai) for announcements
+
+## Conclusion
+
+You now have a running RL Swarm node contributing to the Gensyn network! As the project evolves, make sure to keep your node updated by periodically running `git pull` in the rl-swarm directory and restarting your node.
 
 ---
 
-*Guide published by bokiko | Twitter: [Join our community](https://x.com/bokiko_io)*
+*Guide published by bokiko | Discord: [Join our community](https://discord.gg/bokiko)*
