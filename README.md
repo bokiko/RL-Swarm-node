@@ -99,6 +99,23 @@ NODE_NAME=my-rl-swarm-node
 CPU_LIMIT=4
 # If you're on CPU only, set to false
 GPU_ENABLED=false
+# Custom port (default is 8080)
+UI_PORT=8585
+```
+
+Save and exit: `Ctrl+O`, `Enter`, `Ctrl+X`
+
+If you need to modify the web interface port from the default 8080, you can also edit the `docker-compose.yml` file:
+
+```bash
+nano docker-compose.yml
+```
+
+Find the ports section (typically under the web service) and change it:
+
+```yaml
+ports:
+  - "8585:8080"  # Change 8585 to your desired port
 ```
 
 Save and exit: `Ctrl+O`, `Enter`, `Ctrl+X`
@@ -124,13 +141,15 @@ Press `Ctrl+C` to exit the logs view while keeping the containers running.
 
 The RL Swarm node provides a web interface for monitoring and management:
 
-- Local access: `http://localhost:8080`
-- Remote access: `http://<mini-pc-ip>:8080`
+- Local access: `http://localhost:8585`
+- Remote access: `http://<mini-pc-ip>:8585`
 
 To find your IP address:
 ```bash
 ip addr show
 ```
+
+If you're using the default port (8080) instead of our custom port (8585), adjust the URLs accordingly.
 
 ### Step 7: Set Up for Automatic Start on Boot
 
@@ -201,9 +220,9 @@ newgrp docker
 ```
 
 ### Port Conflicts
-If port 8080 is already in use:
+If port 8585 is already in use:
 ```bash
-sudo lsof -i :8080
+sudo lsof -i :8585
 ```
 Then either kill the process or edit `docker-compose.yml` to use a different port.
 
