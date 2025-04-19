@@ -2,6 +2,12 @@
 
 This guide provides simple step-by-step instructions for setting up a Gensyn RL-Swarm node on Ubuntu.
 
+## Prerequisites
+
+- Ubuntu 20.04 or newer
+- Minimum 4GB RAM
+- At least 2 CPU cores
+
 ## Quick Setup
 
 ### Step 1: Install Prerequisites
@@ -9,6 +15,17 @@ This guide provides simple step-by-step instructions for setting up a Gensyn RL-
 ```bash
 # Update and upgrade packages
 sudo apt update && sudo apt upgrade -y
+
+# Install Node.js and npm
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs
+
+# Verify Node.js installation
+node -v
+npm -v
+
+# Install Yarn
+sudo npm install -g yarn
 
 # Install Docker
 curl -fsSL https://get.docker.com -o get-docker.sh
@@ -35,7 +52,17 @@ git clone https://github.com/gensyn-ai/rl-swarm.git
 cd rl-swarm
 ```
 
-### Step 3: Configure Node
+### Step 3: Install Dependencies
+
+```bash
+# Install project dependencies using Yarn
+yarn install
+
+# Build the project
+yarn build
+```
+
+### Step 4: Configure Node
 
 ```bash
 # Create .env file
@@ -46,11 +73,12 @@ Add the following to the .env file:
 ```
 NODE_NAME=your-node-name
 NODE_WALLET_ADDRESS=your-eth-wallet-address
+LOG_LEVEL=info
 ```
 
 Press `Ctrl+X`, then `Y` to save and exit.
 
-### Step 4: Start the Node
+### Step 5: Start the Node
 
 Create a tmux session to keep the node running:
 
@@ -65,7 +93,7 @@ docker-compose up
 To detach from tmux: Press `Ctrl+B`, then `D`
 To reattach later: `tmux attach -t gensyn`
 
-### Step 5: Set Up Auto-restart
+### Step 6: Set Up Auto-restart
 
 Create a startup script:
 
@@ -103,11 +131,38 @@ To see if your node is running correctly:
 # Check container status
 docker ps
 
+# Check running services
+docker-compose ps
+
 # To see node logs
 docker-compose logs -f
 
 # To get your node IP
 hostname -I | awk '{print $1}'
+```
+
+## Additional Setup Options
+
+### GPU Support (Optional)
+
+If you want to use GPU:
+
+```bash
+# Install NVIDIA drivers and CUDA
+sudo apt install -y nvidia-driver-525
+sudo apt install -y nvidia-cuda-toolkit
+
+# Verify GPU is detected
+nvidia-smi
+
+# Edit .env file to enable GPU
+nano .env
+```
+
+Add to .env:
+```
+NVIDIA_VISIBLE_DEVICES=all
+CUDA_VISIBLE_DEVICES=0
 ```
 
 ## Basic Troubleshooting
@@ -121,6 +176,12 @@ docker-compose up -d
 
 # Check logs for errors
 docker logs rl-swarm-fastapi-1
+
+# Check yarn installation
+yarn --version
+
+# Reinstall dependencies if needed
+yarn install --force
 ```
 
 ## Resources
