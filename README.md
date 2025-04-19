@@ -32,6 +32,8 @@ RL Swarm is a decentralized network for training reinforcement learning models, 
 
 ## Installation Guide
 
+> **Note**: This guide is designed for running RL Swarm on a CPU-only mini PC. We'll be configuring the node to use port 3000 for the web interface.
+
 ### Step 1: Update Your System
 
 Ensure your system is up to date:
@@ -125,8 +127,8 @@ NODE_NAME=my-rl-swarm-node
 CPU_LIMIT=4
 # If you're on CPU only, set to false
 GPU_ENABLED=false
-# If you want to change the web UI port (default is 8080)
-PORT=8585
+# Set the web UI port to 3000
+PORT=3000
 ```
 
 Save and exit: `Ctrl+O`, `Enter`, `Ctrl+X`
@@ -178,19 +180,19 @@ After cleaning up, try again:
 docker-compose up -d
 ```
 
-### Step 6: Access the Web Interface
+### Step 5: Access the Web Interface
 
-The RL Swarm node provides a web interface for monitoring and management:
+After successfully starting the node, access the web interface:
 
-- Local access: `http://localhost:8585`
-- Remote access: `http://<mini-pc-ip>:8585`
+- Local access: `http://localhost:3000`
+- Remote access: `http://<mini-pc-ip>:3000`
 
 To find your IP address:
 ```bash
 ip addr show
 ```
 
-If you're using the default port (8080) instead of our custom port (8585), adjust the URLs accordingly.
+The web interface allows you to monitor your node's activity and performance.
 
 ### Step 7: Set Up for Automatic Start on Boot
 
