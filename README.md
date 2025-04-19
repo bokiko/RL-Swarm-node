@@ -74,16 +74,42 @@ sudo chown root:docker /var/run/docker.sock
 sudo chmod 660 /var/run/docker.sock
 ```
 
-### Step 3: Clone the RL Swarm Repository
+### Step 3: Clone and Prepare RL Swarm
 
+#### Clone the Repository
 ```bash
 cd $HOME
 git clone https://github.com/gensyn-ai/rl-swarm.git
 cd rl-swarm
 ```
 
-### Step 4: Configure the Node
+#### Identify the Correct Docker Images
+Let's examine the existing docker-compose file to find the correct images:
 
+```bash
+cat docker-compose.yml
+```
+
+Note down the container images used in the original file. If you see services like "fastapi" and "otel-collector", those are part of the official setup.
+
+#### Clean Up Existing Containers
+If you have leftover containers causing network errors:
+
+```bash
+# Force stop all running containers in this project
+docker-compose kill
+
+# List all running docker containers
+docker ps
+
+# Stop individual containers if needed
+docker stop rl-swarm-otel-collector-1 rl-swarm-fastapi-1
+
+# Remove containers
+docker rm rl-swarm-otel-collector-1 rl-swarm-fastapi-1
+```
+
+#### Create Environment Configuration
 Create a `.env` file to configure your node:
 
 ```bash
@@ -99,43 +125,58 @@ NODE_NAME=my-rl-swarm-node
 CPU_LIMIT=4
 # If you're on CPU only, set to false
 GPU_ENABLED=false
-# Custom port (default is 8080)
-UI_PORT=8585
+# If you want to change the web UI port (default is 8080)
+PORT=8585
 ```
 
 Save and exit: `Ctrl+O`, `Enter`, `Ctrl+X`
 
-If you need to modify the web interface port from the default 8080, you can also edit the `docker-compose.yml` file:
+### Step 4: Launch with Original Configuration
+
+Based on your terminal output, it appears that the repository already contains the correct configuration, but we're having issues with the Docker images. Instead of creating a custom configuration, let's use the original setup:
 
 ```bash
-nano docker-compose.yml
+# Make sure you're in the repository directory
+cd ~/rl-swarm
+
+# Start using the original docker-compose.yml
+docker-compose up -d
 ```
 
-Find the ports section (typically under the web service) and change it:
+If you encounter image pulling errors, let's check what images are specified in the original file:
 
-```yaml
-ports:
-  - "8585:8080"  # Change 8585 to your desired port
+```bash
+grep "image:" docker-compose.yml
 ```
 
-Save and exit: `Ctrl+O`, `Enter`, `Ctrl+X`
+#### Troubleshooting Network Issues
 
-### Step 5: Launch the RL Swarm Node
+If you encounter network errors like "network has active endpoints":
 
-Start the containers with Docker Compose:
+```bash
+# List all running containers from this project
+docker-compose ps -a
+
+# Try to force recreate everything
+docker-compose up -d --force-recreate
+```
+
+If that doesn't work, you may need to manually remove specific containers:
+
+```bash
+# See all containers, including stopped ones
+docker ps -a
+
+# Stop and remove problematic containers
+docker stop rl-swarm-otel-collector-1 rl-swarm-fastapi-1
+docker rm rl-swarm-otel-collector-1 rl-swarm-fastapi-1
+```
+
+After cleaning up, try again:
 
 ```bash
 docker-compose up -d
 ```
-
-This runs the containers in detached mode (in the background).
-
-To view the logs:
-```bash
-docker-compose logs -f
-```
-
-Press `Ctrl+C` to exit the logs view while keeping the containers running.
 
 ### Step 6: Access the Web Interface
 
@@ -212,19 +253,60 @@ docker-compose up -d
 
 ## Troubleshooting
 
-### Docker Permission Issues
-If you see "permission denied" errors:
-```bash
-sudo usermod -aG docker $USER
-newgrp docker
+### Docker Image Pull Errors
+If you see "pull access denied" or "repository does not exist" errors:
+
+```
+Error response from daemon: pull access denied for gensyn/rl-swarm, repository does not exist
 ```
 
-### Port Conflicts
-If port 8585 is already in use:
+This means the Docker image name in the compose file is incorrect. Check the correct image names:
+
 ```bash
-sudo lsof -i :8585
+# First, check what images are specified in the original docker-compose.yml
+grep "image:" docker-compose.yml
 ```
-Then either kill the process or edit `docker-compose.yml` to use a different port.
+
+If you don't see any obvious public images, the repository may use a build process instead:
+
+```bash
+# Check if there's a build section instead of image
+grep "build:" docker-compose.yml
+```
+
+If it uses a build section, you'll need to build the images locally:
+
+```bash
+docker-compose build
+```
+
+Then try running again:
+
+```bash
+docker-compose up -d
+```
+
+### Network Removal Errors
+If you see "network has active endpoints" errors:
+
+```
+failed to remove network: network rl-swarm_default has active endpoints
+```
+
+Use these commands to clean up:
+
+```bash
+# Force stop all containers in this compose project
+docker-compose down --remove-orphans
+
+# If that doesn't work, find and remove the containers manually
+docker ps -a
+docker stop $(docker ps -a -q)
+docker rm $(docker ps -a -q)
+
+# As a last resort, restart Docker service
+sudo systemctl restart docker
+```
 
 ### Container Not Starting
 Check docker logs for errors:
