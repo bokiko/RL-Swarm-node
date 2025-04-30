@@ -64,13 +64,13 @@ Add these lines to the file (replace with your information):
 # Basic Configuration
 NODE_NAME=your-unique-node-name
 NODE_WALLET_ADDRESS=your-ethereum-wallet-address
-EMAIL_ADDRESS=your-email@example.com  # New: for multi-peer ID/EOA mapping
+EMAIL_ADDRESS=your-email@example.com  # For multi-peer ID/EOA mapping
 
-# Choose Your Swarm Tier
-# Option 1: Consumer tier (8GB+ VRAM) - Uncomment this line:
+# Choose ONE of these two lines based on your GPU:
+# For GPUs with 8GB-23GB VRAM (like RTX 2070, 3070, etc):
 SWARM_TIER=consumer
 
-# Option 2: Powerful tier (24GB+ VRAM) - Uncomment this line instead:
+# For GPUs with 24GB+ VRAM (like RTX 3090, 4090, A100, etc):
 # SWARM_TIER=powerful
 
 # GPU Configuration
@@ -166,13 +166,13 @@ nvidia-smi -l 5  # Updates every 5 seconds
    - Requires 8GB+ VRAM
    - Suitable for consumer-grade GPUs
    - Lower computational requirements
-   - Set `SWARM_TIER=consumer` in .env
+   - Use `SWARM_TIER=consumer` in .env
 
 2. **Powerful Tier** (DAPO-Math-17k dataset):
    - Supports models up to 72B parameters
    - Requires 24GB+ VRAM
    - Harder mathematical problems
-   - Set `SWARM_TIER=powerful` in .env
+   - Use `SWARM_TIER=powerful` in .env
 
 ## Troubleshooting
 
