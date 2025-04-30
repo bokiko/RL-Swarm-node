@@ -1,99 +1,116 @@
-# Gensyn RL-Swarm Node Setup Guide
+# Updated Gensyn RL-Swarm 72B Setup Guide for Ubuntu
 
-This guide provides simple step-by-step instructions for setting up a Gensyn RL-Swarm node on Ubuntu.
+This guide covers setting up a node for the latest Gensyn RL-Swarm system on Ubuntu, including support for the new 72B parameter models and multi-swarm capabilities.
 
 ## Prerequisites
 
 - Ubuntu 20.04 or newer
-- Minimum 4GB RAM
-- At least 2 CPU cores
+- **Consumer tier**: GPU with 8GB+ VRAM
+- **Powerful tier**: GPU with 24GB+ VRAM (for 72B parameter models)
+- Minimum 16GB system RAM (32GB+ recommended for powerful tier)
+- 4+ CPU cores
 
-## Quick Setup
-
-### Step 1: Install Prerequisites
+## Step 1: Install Required Software
 
 ```bash
-# Update and upgrade packages
+# Update system
 sudo apt update && sudo apt upgrade -y
 
-# Install Node.js and npm
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt install -y nodejs
-
-# Verify Node.js installation
-node -v
-npm -v
-
-# Install Yarn
-sudo npm install -g yarn
+# Install dependencies
+sudo apt install -y git curl wget tmux nvidia-driver-525
 
 # Install Docker
 curl -fsSL https://get.docker.com -o get-docker.sh
 sudo sh get-docker.sh
 sudo usermod -aG docker $USER
 
-# Install Docker Compose
-sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-sudo chmod +x /usr/local/bin/docker-compose
+# Install NVIDIA Container Toolkit for GPU support
+distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
+curl -s -L https://nvidia.github.io/nvidia-docker/gpgkey | sudo apt-key add -
+curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | sudo tee /etc/apt/sources.list.d/nvidia-docker.list
+sudo apt update && sudo apt install -y nvidia-container-toolkit
+sudo systemctl restart docker
 
-# Install other necessary tools
-sudo apt install -y git tmux nano
+# Log out and log back in for Docker permissions to take effect
+# (If using SSH, disconnect and reconnect)
 ```
 
-Log out and log back in to apply docker group changes.
-
-### Step 2: Clone the Repository
+## Step 2: Clone the Repository
 
 ```bash
-# Clone the repository
+# Clone the repo (or pull latest changes if already cloned)
 git clone https://github.com/gensyn-ai/rl-swarm.git
 
-# Navigate to the repository
+# If you already have the repo, update it
+# cd rl-swarm
+# git pull
+
+# Go to the project directory
 cd rl-swarm
 ```
 
-### Step 3: Install Dependencies
+## Step 3: Configure Your Node
 
-```bash
-# Install project dependencies using Yarn
-yarn install
-
-# Build the project
-yarn build
-```
-
-### Step 4: Configure Node
+Create the configuration file:
 
 ```bash
 # Create .env file
 nano .env
 ```
 
-Add the following to the .env file:
+Add these lines to the file (replace with your information):
+
 ```
-NODE_NAME=your-node-name
-NODE_WALLET_ADDRESS=your-eth-wallet-address
-LOG_LEVEL=info
+# Basic Configuration
+NODE_NAME=your-unique-node-name
+NODE_WALLET_ADDRESS=your-ethereum-wallet-address
+EMAIL_ADDRESS=your-email@example.com  # New: for multi-peer ID/EOA mapping
+
+# Choose Your Swarm Tier
+# Option 1: Consumer tier (8GB+ VRAM) - Uncomment this line:
+SWARM_TIER=consumer
+
+# Option 2: Powerful tier (24GB+ VRAM) - Uncomment this line instead:
+# SWARM_TIER=powerful
+
+# GPU Configuration
+NVIDIA_VISIBLE_DEVICES=all
 ```
 
-Press `Ctrl+X`, then `Y` to save and exit.
+Save and exit (Ctrl+X, then Y, then Enter).
 
-### Step 5: Start the Node
+## Step 4: Start Your Node
 
-Create a tmux session to keep the node running:
+First, test your GPU setup:
 
 ```bash
-# Start a new tmux session
-tmux new -s gensyn
+# Verify NVIDIA drivers are installed correctly
+nvidia-smi
 
-# In the tmux session, start the node
-docker-compose up
+# Test NVIDIA Docker
+docker run --gpus all nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
 ```
 
-To detach from tmux: Press `Ctrl+B`, then `D`
-To reattach later: `tmux attach -t gensyn`
+Start the node using tmux (keeps it running when you disconnect):
 
-### Step 6: Set Up Auto-restart
+```bash
+# Create a new tmux session
+tmux new -s gensyn
+
+# Inside tmux, start the node
+docker-compose up
+
+# To detach from tmux (keeps node running): 
+# Press Ctrl+B, then D
+```
+
+To reattach to the tmux session later:
+
+```bash
+tmux attach -t gensyn
+```
+
+## Step 5: Set Up Auto-start (Optional)
 
 Create a startup script:
 
@@ -101,94 +118,114 @@ Create a startup script:
 nano ~/start-gensyn.sh
 ```
 
-Add the following content:
+Add the following:
+
 ```bash
 #!/bin/bash
+sleep 30  # Wait for system to fully boot
 cd ~/rl-swarm
+docker-compose down  # Ensure clean start
 tmux new-session -d -s gensyn 'docker-compose up'
 ```
 
-Make it executable:
+Make it executable and set up auto-start:
+
 ```bash
 chmod +x ~/start-gensyn.sh
-```
 
-Set it to run on reboot:
-```bash
+# Configure auto-start using crontab
 crontab -e
 ```
 
-Add this line:
+Add this line to the crontab file:
+
 ```
 @reboot ~/start-gensyn.sh
 ```
 
+Save and exit.
+
 ## Checking Node Status
 
-To see if your node is running correctly:
+To verify your node is running properly:
 
 ```bash
-# Check container status
+# Check if containers are running
 docker ps
 
-# Check running services
-docker-compose ps
-
-# To see node logs
+# Check logs
 docker-compose logs -f
 
-# To get your node IP
-hostname -I | awk '{print $1}'
+# Monitor GPU usage
+nvidia-smi -l 5  # Updates every 5 seconds
 ```
 
-## Additional Setup Options
+## Understanding the Two Swarm Tiers
 
-### GPU Support (Optional)
+1. **Consumer Tier** (GSM8K dataset):
+   - Requires 8GB+ VRAM
+   - Suitable for consumer-grade GPUs
+   - Lower computational requirements
+   - Set `SWARM_TIER=consumer` in .env
 
-If you want to use GPU:
+2. **Powerful Tier** (DAPO-Math-17k dataset):
+   - Supports models up to 72B parameters
+   - Requires 24GB+ VRAM
+   - Harder mathematical problems
+   - Set `SWARM_TIER=powerful` in .env
+
+## Troubleshooting
+
+If containers show "unhealthy" status:
 
 ```bash
-# Install NVIDIA drivers and CUDA
-sudo apt install -y nvidia-driver-525
-sudo apt install -y nvidia-cuda-toolkit
-
-# Verify GPU is detected
-nvidia-smi
-
-# Edit .env file to enable GPU
-nano .env
-```
-
-Add to .env:
-```
-NVIDIA_VISIBLE_DEVICES=all
-CUDA_VISIBLE_DEVICES=0
-```
-
-## Basic Troubleshooting
-
-If containers show as "unhealthy":
-
-```bash
-# Restart containers
+# Restart
 docker-compose down
 docker-compose up -d
 
-# Check logs for errors
+# Check logs
 docker logs rl-swarm-fastapi-1
+```
 
-# Check yarn installation
-yarn --version
+GPU-related issues:
 
-# Reinstall dependencies if needed
-yarn install --force
+```bash
+# Check GPU is visible to Docker
+docker run --gpus all nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
+
+# If GPU not detected in container, restart NVIDIA services
+sudo systemctl restart nvidia-docker
+sudo systemctl restart docker
+```
+
+## Useful Commands
+
+```bash
+# View node logs
+docker-compose logs -f
+
+# Restart node
+docker-compose restart
+
+# Stop node
+docker-compose down
+
+# Start node in background
+docker-compose up -d
+
+# Update to latest version
+git pull
+docker-compose down
+docker-compose pull
+docker-compose up -d
+
+# Get node IP
+hostname -I | awk '{print $1}'
 ```
 
 ## Resources
 
-- [Official Gensyn GitHub](https://github.com/gensyn-ai/rl-swarm)
+- [Official GitHub Repository](https://github.com/gensyn-ai/rl-swarm)
 - [Gensyn Documentation](https://docs.gensyn.ai/litepaper)
-
----
-
-Created by [Cloudiko.io]
+- [Consumer Swarm Dashboard](https://app.gensyn.ai/dashboard)
+- [Powerful Swarm Dashboard](https://app.gensyn.ai/dashboard-hard)
