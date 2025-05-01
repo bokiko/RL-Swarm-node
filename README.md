@@ -1,8 +1,10 @@
-# Updated Gensyn RL-Swarm 72B Setup Guide for Ubuntu
+# Complete Gensyn RL-Swarm 72B Setup Guide
 
-This guide covers setting up a node for the latest Gensyn RL-Swarm system on Ubuntu, including support for the new 72B parameter models and multi-swarm capabilities.
+This guide covers setting up a Gensyn RL-Swarm node on both native Ubuntu and WSL2, including support for the new 72B parameter models and multi-swarm capabilities.
 
-## Prerequisites
+## Ubuntu Setup (Recommended)
+
+### Prerequisites
 
 - Ubuntu 20.04 or newer
 - **Consumer tier**: GPU with 8GB+ VRAM
@@ -10,7 +12,7 @@ This guide covers setting up a node for the latest Gensyn RL-Swarm system on Ubu
 - Minimum 16GB system RAM (32GB+ recommended for powerful tier)
 - 4+ CPU cores
 
-## Step 1: Install Required Software
+### Step 1: Install Required Software
 
 ```bash
 # Update system
@@ -26,8 +28,8 @@ sudo usermod -aG docker $USER
 
 # Install NVIDIA Container Toolkit for GPU support
 distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
-curl -s -L https://nvidia.github.io/nvidia-docker/gpgkey | sudo apt-key add -
-curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | sudo tee /etc/apt/sources.list.d/nvidia-docker.list
+curl -s -L https://nvidia.github.io/nvidia-container/gpgkey | sudo apt-key add -
+curl -s -L https://nvidia.github.io/nvidia-container/$distribution/nvidia-container.list | sudo tee /etc/apt/sources.list.d/nvidia-container.list
 sudo apt update && sudo apt install -y nvidia-container-toolkit
 sudo systemctl restart docker
 
@@ -35,21 +37,17 @@ sudo systemctl restart docker
 # (If using SSH, disconnect and reconnect)
 ```
 
-## Step 2: Clone the Repository
+### Step 2: Clone the Repository
 
 ```bash
-# Clone the repo (or pull latest changes if already cloned)
+# Clone the repo
 git clone https://github.com/gensyn-ai/rl-swarm.git
-
-# If you already have the repo, update it
-# cd rl-swarm
-# git pull
 
 # Go to the project directory
 cd rl-swarm
 ```
 
-## Step 3: Configure Your Node
+### Step 3: Configure Your Node
 
 Create the configuration file:
 
@@ -64,9 +62,9 @@ Add these lines to the file (replace with your information):
 # Basic Configuration
 NODE_NAME=your-unique-node-name
 NODE_WALLET_ADDRESS=your-ethereum-wallet-address
-EMAIL_ADDRESS=your-email@example.com  # For multi-peer ID/EOA mapping
+EMAIL_ADDRESS=your-email@example.com
 
-# Choose ONE of these two lines based on your GPU:
+# Choose ONE of these based on your GPU:
 # For GPUs with 8GB-23GB VRAM (like RTX 2070, 3070, etc):
 SWARM_TIER=consumer
 
@@ -77,9 +75,7 @@ SWARM_TIER=consumer
 NVIDIA_VISIBLE_DEVICES=all
 ```
 
-Save and exit (Ctrl+X, then Y, then Enter).
-
-## Step 4: Start Your Node
+### Step 4: Start Your Node
 
 First, test your GPU setup:
 
@@ -110,7 +106,22 @@ To reattach to the tmux session later:
 tmux attach -t gensyn
 ```
 
-## Step 5: Set Up Auto-start (Optional)
+### Step 5: Complete Identity Verification
+
+When you first start your node:
+
+1. **Check logs for verification email**:
+   - The system will send a verification email to the address you provided
+   - Look for an email from Gensyn with a verification link
+   - Click the link to verify your email and complete registration
+
+2. **Check registration status**:
+   - After verification, your node will be registered on the network
+   - View your node in the appropriate dashboard:
+     - Consumer tier: https://app.gensyn.ai/dashboard
+     - Powerful tier: https://app.gensyn.ai/dashboard-hard
+
+### Step 6: Set Up Auto-start
 
 Create a startup script:
 
@@ -143,11 +154,77 @@ Add this line to the crontab file:
 @reboot ~/start-gensyn.sh
 ```
 
-Save and exit.
+## WSL2 Setup (Alternative)
+
+If you're using Windows Subsystem for Linux (WSL2), follow these steps instead:
+
+### Step 1: Install Docker Desktop for Windows
+
+1. **Download and install Docker Desktop** from https://www.docker.com/products/docker-desktop/
+2. **Enable WSL2 integration** in Docker Desktop Settings → Resources → WSL Integration
+3. **Enable GPU support** in Docker Desktop Settings → Resources → NVIDIA GPU (if using NVIDIA GPU)
+
+### Step 2: Set Up in WSL2
+
+Open your WSL2 Ubuntu terminal and run:
+
+```bash
+# Install required tools
+sudo apt update && sudo apt install -y git tmux
+
+# Clone the repository
+git clone https://github.com/gensyn-ai/rl-swarm.git
+cd rl-swarm
+
+# Create .env file
+nano .env
+```
+
+Add the same configuration as in the Ubuntu setup:
+
+```
+NODE_NAME=your-unique-node-name
+NODE_WALLET_ADDRESS=your-ethereum-wallet-address
+EMAIL_ADDRESS=your-email@example.com
+SWARM_TIER=consumer  # or powerful for 24GB+ VRAM GPUs
+NVIDIA_VISIBLE_DEVICES=all
+```
+
+Start the node:
+
+```bash
+# Create tmux session
+tmux new -s gensyn
+
+# Start node
+docker-compose up
+
+# Detach from tmux: Ctrl+B, then D
+```
+
+For auto-start in WSL2, you'll need to create a Windows scheduled task or start manually after WSL boots.
+
+## Multi-Node Setup
+
+To run multiple nodes with the same wallet:
+
+1. Each node must have a unique `NODE_NAME`
+2. Use the same `EMAIL_ADDRESS` and `NODE_WALLET_ADDRESS` across all nodes
+3. Complete email verification once, and all nodes will be linked to your account
+
+## Understanding the Two Swarm Tiers
+
+1. **Consumer Tier** (GSM8K dataset):
+   - Requires 8GB+ VRAM
+   - Suitable for consumer-grade GPUs
+   - Use `SWARM_TIER=consumer` in .env
+
+2. **Powerful Tier** (DAPO-Math-17k dataset):
+   - Supports models up to 72B parameters
+   - Requires 24GB+ VRAM
+   - Use `SWARM_TIER=powerful` in .env
 
 ## Checking Node Status
-
-To verify your node is running properly:
 
 ```bash
 # Check if containers are running
@@ -157,29 +234,27 @@ docker ps
 docker-compose logs -f
 
 # Monitor GPU usage
-nvidia-smi -l 5  # Updates every 5 seconds
+nvidia-smi -l 5
 ```
-
-## Understanding the Two Swarm Tiers
-
-1. **Consumer Tier** (GSM8K dataset):
-   - Requires 8GB+ VRAM
-   - Suitable for consumer-grade GPUs
-   - Lower computational requirements
-   - Use `SWARM_TIER=consumer` in .env
-
-2. **Powerful Tier** (DAPO-Math-17k dataset):
-   - Supports models up to 72B parameters
-   - Requires 24GB+ VRAM
-   - Harder mathematical problems
-   - Use `SWARM_TIER=powerful` in .env
 
 ## Troubleshooting
 
-If containers show "unhealthy" status:
+GPU-related issues:
 
 ```bash
-# Restart
+# Check if NVIDIA drivers are working
+nvidia-smi
+
+# For WSL2: Ensure GPU support is enabled in Docker Desktop settings
+
+# Test GPU in Docker
+docker run --gpus all nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
+```
+
+Container issues:
+
+```bash
+# Restart containers
 docker-compose down
 docker-compose up -d
 
@@ -187,15 +262,13 @@ docker-compose up -d
 docker logs rl-swarm-fastapi-1
 ```
 
-GPU-related issues:
+Email verification issues:
 
 ```bash
-# Check GPU is visible to Docker
-docker run --gpus all nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
+# Check for email-related logs
+docker-compose logs -f | grep -i email
 
-# If GPU not detected in container, restart NVIDIA services
-sudo systemctl restart nvidia-docker
-sudo systemctl restart docker
+# If no email received, verify your email address in .env and restart
 ```
 
 ## Useful Commands
@@ -207,20 +280,11 @@ docker-compose logs -f
 # Restart node
 docker-compose restart
 
-# Stop node
-docker-compose down
-
-# Start node in background
-docker-compose up -d
-
 # Update to latest version
 git pull
 docker-compose down
 docker-compose pull
 docker-compose up -d
-
-# Get node IP
-hostname -I | awk '{print $1}'
 ```
 
 ## Resources
