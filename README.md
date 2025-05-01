@@ -1,41 +1,47 @@
-# Complete Gensyn RL-Swarm 72B Setup Guide
+# Gensyn RL-Swarm Complete Setup Guide
 
-This guide covers setting up a Gensyn RL-Swarm node on both native Ubuntu and WSL2, including support for the new 72B parameter models and multi-swarm capabilities.
+This guide provides straightforward instructions for setting up a Gensyn RL-Swarm node, with specific information for both Ubuntu and WSL2 users.
 
-## Ubuntu Setup (Recommended)
+## Hardware Requirements
 
-### Prerequisites
+- **CPU:** Minimum 16GB RAM (more recommended for larger models)
+- **GPU:** 
+  - Consumer tier (Math GSM8K): GPU with ≥8GB VRAM
+  - Powerful tier (Math Hard DAPO-17K): GPU with ≥24GB VRAM
+  - CPU-only mode is also possible but not recommended
 
-- Ubuntu 20.04 or newer
-- **Consumer tier**: GPU with 8GB+ VRAM
-- **Powerful tier**: GPU with 24GB+ VRAM (for 72B parameter models)
-- Minimum 16GB system RAM (32GB+ recommended for powerful tier)
-- 4+ CPU cores
+## Ubuntu Setup
 
-### Step 1: Install Required Software
+### Step 1: Install Prerequisites
 
 ```bash
 # Update system
 sudo apt update && sudo apt upgrade -y
 
-# Install dependencies
-sudo apt install -y git curl wget tmux nvidia-driver-525
+# Install Node.js
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+sudo apt install -y nodejs
+
+# Verify Node.js installation
+node -v
+
+# Install Yarn
+sudo npm install -g yarn
+yarn -v
 
 # Install Docker
 curl -fsSL https://get.docker.com -o get-docker.sh
 sudo sh get-docker.sh
 sudo usermod -aG docker $USER
 
-# Install NVIDIA Container Toolkit for GPU support
-distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
-curl -s -L https://nvidia.github.io/nvidia-container/gpgkey | sudo apt-key add -
-curl -s -L https://nvidia.github.io/nvidia-container/$distribution/nvidia-container.list | sudo tee /etc/apt/sources.list.d/nvidia-container.list
-sudo apt update && sudo apt install -y nvidia-container-toolkit
-sudo systemctl restart docker
+# Install other dependencies
+sudo apt install -y git tmux
 
-# Log out and log back in for Docker permissions to take effect
-# (If using SSH, disconnect and reconnect)
+# For GPU support, install NVIDIA drivers
+sudo apt install -y nvidia-driver-525
 ```
+
+Log out and log back in for Docker permissions to take effect.
 
 ### Step 2: Clone the Repository
 
@@ -43,253 +49,123 @@ sudo systemctl restart docker
 # Clone the repo
 git clone https://github.com/gensyn-ai/rl-swarm.git
 
-# Go to the project directory
+# Navigate to the project directory
 cd rl-swarm
 ```
 
-### Step 3: Configure Your Node
-
-Create the configuration file:
+### Step 3: Start Your Node
 
 ```bash
-# Create .env file
-nano .env
+# Start the node using the script
+./run_rl_swarm.sh
 ```
 
-Add these lines to the file (replace with your information):
+During setup, you'll be asked a series of questions:
 
-```
-# Basic Configuration
-NODE_NAME=your-unique-node-name
-NODE_WALLET_ADDRESS=your-ethereum-wallet-address
-EMAIL_ADDRESS=your-email@example.com
+1. Select whether to pull the latest version (answer 'Y')
+2. Choose which swarm to join:
+   - Option A: Math (GSM8K dataset) - For systems with >8GB VRAM
+   - Option B: Math Hard (DAPO-Math 17K dataset) - For powerful systems
 
-# Choose ONE of these based on your GPU:
-# For GPUs with 8GB-23GB VRAM (like RTX 2070, 3070, etc):
-SWARM_TIER=consumer
+3. Select model size in billions of parameters:
+   - 0.5B, 1.5B: For low-end GPUs (8GB VRAM)
+   - 7B: For mid-range GPUs (16GB VRAM)
+   - 32B, 72B: For high-end GPUs (≥24GB VRAM)
 
-# For GPUs with 24GB+ VRAM (like RTX 3090, 4090, A100, etc):
-# SWARM_TIER=powerful
+### Step 4: Identity Verification
 
-# GPU Configuration
-NVIDIA_VISIBLE_DEVICES=all
-```
+After starting your node, you'll need to verify your identity:
 
-### Step 4: Start Your Node
+1. The system will send a verification email to the address you provided
+2. Look for logs indicating "Waiting for userData.json to be created..."
+3. Access the web UI by opening `http://localhost:3000` in your browser
+4. Log in with your email and complete verification
 
-First, test your GPU setup:
+### Step 5: Backup Important Files
+
+Backup your identity file to avoid losing your progress:
 
 ```bash
-# Verify NVIDIA drivers are installed correctly
-nvidia-smi
-
-# Test NVIDIA Docker
-docker run --gpus all nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
+# Copy the identity file to a safe location
+cp ./swarm.pem ~/swarm.pem
 ```
 
-Start the node using tmux (keeps it running when you disconnect):
+## WSL2 Setup
 
-```bash
-# Create a new tmux session
-tmux new -s gensyn
+For Windows users using WSL2:
 
-# Inside tmux, start the node
-docker-compose up
+### Step 1: Install Docker Desktop
 
-# To detach from tmux (keeps node running): 
-# Press Ctrl+B, then D
-```
+1. Download and install Docker Desktop for Windows
+2. Enable WSL2 integration in Docker Desktop settings
+3. Enable GPU support in Docker Desktop (if using NVIDIA GPU)
 
-To reattach to the tmux session later:
+### Step 2: Follow Ubuntu Steps in WSL2
 
-```bash
-tmux attach -t gensyn
-```
+Open your WSL2 terminal and follow the Ubuntu setup steps above.
 
-### Step 5: Complete Identity Verification
+### Step 3: Access the Web UI
 
-When you first start your node:
+For WSL2 users, to access the login page:
 
-1. **Check logs for verification email**:
-   - The system will send a verification email to the address you provided
-   - Look for an email from Gensyn with a verification link
-   - Click the link to verify your email and complete registration
+1. When connecting via SSH (for remote machines):
+   ```bash
+   ssh username@ip-address -L 3000:localhost:3000
+   ```
 
-2. **Check registration status**:
-   - After verification, your node will be registered on the network
-   - View your node in the appropriate dashboard:
-     - Consumer tier: https://app.gensyn.ai/dashboard
-     - Powerful tier: https://app.gensyn.ai/dashboard-hard
+2. For local WSL2, just navigate to `http://localhost:3000` in your browser
 
-### Step 6: Set Up Auto-start
-
-Create a startup script:
-
-```bash
-nano ~/start-gensyn.sh
-```
-
-Add the following:
-
-```bash
-#!/bin/bash
-sleep 30  # Wait for system to fully boot
-cd ~/rl-swarm
-docker-compose down  # Ensure clean start
-tmux new-session -d -s gensyn 'docker-compose up'
-```
-
-Make it executable and set up auto-start:
-
-```bash
-chmod +x ~/start-gensyn.sh
-
-# Configure auto-start using crontab
-crontab -e
-```
-
-Add this line to the crontab file:
-
-```
-@reboot ~/start-gensyn.sh
-```
-
-## WSL2 Setup (Alternative)
-
-If you're using Windows Subsystem for Linux (WSL2), follow these steps instead:
-
-### Step 1: Install Docker Desktop for Windows
-
-1. **Download and install Docker Desktop** from https://www.docker.com/products/docker-desktop/
-2. **Enable WSL2 integration** in Docker Desktop Settings → Resources → WSL Integration
-3. **Enable GPU support** in Docker Desktop Settings → Resources → NVIDIA GPU (if using NVIDIA GPU)
-
-### Step 2: Set Up in WSL2
-
-Open your WSL2 Ubuntu terminal and run:
-
-```bash
-# Install required tools
-sudo apt update && sudo apt install -y git tmux
-
-# Clone the repository
-git clone https://github.com/gensyn-ai/rl-swarm.git
-cd rl-swarm
-
-# Create .env file
-nano .env
-```
-
-Add the same configuration as in the Ubuntu setup:
-
-```
-NODE_NAME=your-unique-node-name
-NODE_WALLET_ADDRESS=your-ethereum-wallet-address
-EMAIL_ADDRESS=your-email@example.com
-SWARM_TIER=consumer  # or powerful for 24GB+ VRAM GPUs
-NVIDIA_VISIBLE_DEVICES=all
-```
-
-Start the node:
-
-```bash
-# Create tmux session
-tmux new -s gensyn
-
-# Start node
-docker-compose up
-
-# Detach from tmux: Ctrl+B, then D
-```
-
-For auto-start in WSL2, you'll need to create a Windows scheduled task or start manually after WSL boots.
-
-## Multi-Node Setup
+## Running Multiple Nodes
 
 To run multiple nodes with the same wallet:
 
-1. Each node must have a unique `NODE_NAME`
-2. Use the same `EMAIL_ADDRESS` and `NODE_WALLET_ADDRESS` across all nodes
-3. Complete email verification once, and all nodes will be linked to your account
+1. Each node must have a unique name
+2. Use the same email address for all nodes
+3. Complete verification once, and all nodes will be linked
 
-## Understanding the Two Swarm Tiers
+## Updating Your Node
 
-1. **Consumer Tier** (GSM8K dataset):
-   - Requires 8GB+ VRAM
-   - Suitable for consumer-grade GPUs
-   - Use `SWARM_TIER=consumer` in .env
-
-2. **Powerful Tier** (DAPO-Math-17k dataset):
-   - Supports models up to 72B parameters
-   - Requires 24GB+ VRAM
-   - Use `SWARM_TIER=powerful` in .env
-
-## Checking Node Status
+If an update is available:
 
 ```bash
-# Check if containers are running
-docker ps
+# Backup your identity file
+cp ./swarm.pem ~/swarm.pem
 
-# Check logs
-docker-compose logs -f
+# Update the repository
+git pull
 
-# Monitor GPU usage
-nvidia-smi -l 5
+# If needed, clean the repository
+git reset --hard origin/main
+
+# Restore your identity file
+cp ~/swarm.pem ./swarm.pem
+
+# Restart your node
+./run_rl_swarm.sh
 ```
 
 ## Troubleshooting
 
-GPU-related issues:
+If you encounter issues:
 
-```bash
-# Check if NVIDIA drivers are working
-nvidia-smi
+- Check if verification email was sent
+- Verify ports are correctly forwarded if using SSH
+- If you see "EVM Wallet: 0x0000000000000000000000000000000000000000", your on-chain participation isn't being tracked
 
-# For WSL2: Ensure GPU support is enabled in Docker Desktop settings
+## Swarm Options
 
-# Test GPU in Docker
-docker run --gpus all nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
-```
+1. **Math (GSM8K dataset)**:
+   - For consumer hardware (>8GB VRAM)
+   - Use smaller models (0.5B or 1.5B)
+   - Less computational requirements
 
-Container issues:
-
-```bash
-# Restart containers
-docker-compose down
-docker-compose up -d
-
-# Check logs
-docker logs rl-swarm-fastapi-1
-```
-
-Email verification issues:
-
-```bash
-# Check for email-related logs
-docker-compose logs -f | grep -i email
-
-# If no email received, verify your email address in .env and restart
-```
-
-## Useful Commands
-
-```bash
-# View node logs
-docker-compose logs -f
-
-# Restart node
-docker-compose restart
-
-# Update to latest version
-git pull
-docker-compose down
-docker-compose pull
-docker-compose up -d
-```
+2. **Math Hard (DAPO-Math 17K dataset)**:
+   - For powerful hardware (≥24GB VRAM)
+   - Use larger models (7B, 32B, or 72B)
+   - Tackles more complex problems
 
 ## Resources
 
 - [Official GitHub Repository](https://github.com/gensyn-ai/rl-swarm)
-- [Gensyn Documentation](https://docs.gensyn.ai/litepaper)
-- [Consumer Swarm Dashboard](https://app.gensyn.ai/dashboard)
-- [Powerful Swarm Dashboard](https://app.gensyn.ai/dashboard-hard)
+- [Consumer Dashboard](https://app.gensyn.ai/dashboard)
+- [Powerful Dashboard](https://app.gensyn.ai/dashboard-hard)
