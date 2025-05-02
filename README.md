@@ -53,7 +53,26 @@ git clone https://github.com/gensyn-ai/rl-swarm.git
 cd rl-swarm
 ```
 
-### Step 3: Start Your Node
+### Step 3: Configure Your Wallet
+
+Before starting the node, you need to set up your Ethereum wallet for receiving rewards:
+
+```bash
+# Create or edit .env file
+nano .env
+```
+
+Add the following to your .env file:
+
+```
+NODE_NAME=your-unique-node-name
+NODE_WALLET_ADDRESS=your-ethereum-wallet-address
+EMAIL_ADDRESS=your-email@example.com
+```
+
+Save and exit (Ctrl+X, then Y, then Enter).
+
+### Step 4: Start Your Node
 
 ```bash
 # Start the node using the script
@@ -72,7 +91,7 @@ During setup, you'll be asked a series of questions:
    - 7B: For mid-range GPUs (16GB VRAM)
    - 32B, 72B: For high-end GPUs (≥24GB VRAM)
 
-### Step 4: Identity Verification
+### Step 5: Identity Verification
 
 After starting your node, you'll need to verify your identity:
 
@@ -81,7 +100,7 @@ After starting your node, you'll need to verify your identity:
 3. Access the web UI by opening `http://localhost:3000` in your browser
 4. Log in with your email and complete verification
 
-### Step 5: Backup Important Files
+### Step 6: Backup Important Files
 
 Backup your identity file to avoid losing your progress:
 
@@ -151,6 +170,12 @@ If you encounter issues:
 - Check if verification email was sent
 - Verify ports are correctly forwarded if using SSH
 - If you see "EVM Wallet: 0x0000000000000000000000000000000000000000", your on-chain participation isn't being tracked
+
+**Important wallet troubleshooting:**
+- Make sure your Ethereum wallet address is correctly set in the .env file
+- The wallet address must be a valid Ethereum address starting with "0x"
+- Check the logs to confirm your wallet address is being recognized
+- If your wallet address isn't recognized, try editing the .env file and restarting the node
 
 ## Swarm Options
 
