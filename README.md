@@ -53,9 +53,9 @@ git clone https://github.com/gensyn-ai/rl-swarm.git
 cd rl-swarm
 ```
 
-### Step 3: Configure Your Wallet
+### Step 3: Configure Your Environment
 
-Before starting the node, you need to set up your Ethereum wallet for receiving rewards:
+Before starting the node, you need to set up your configuration:
 
 ```bash
 # Create or edit .env file
@@ -65,9 +65,17 @@ nano .env
 Add the following to your .env file:
 
 ```
+# Required Configuration
 NODE_NAME=your-unique-node-name
 NODE_WALLET_ADDRESS=your-ethereum-wallet-address
 EMAIL_ADDRESS=your-email@example.com
+
+# Optional Configuration
+# For older GPUs that don't support BF16 precision:
+# USE_FP16=True
+
+# For very old GPUs or CPU-only mode:
+# FORCE_CPU=True
 ```
 
 Save and exit (Ctrl+X, then Y, then Enter).
@@ -176,6 +184,30 @@ If you encounter issues:
 - The wallet address must be a valid Ethereum address starting with "0x"
 - Check the logs to confirm your wallet address is being recognized
 - If your wallet address isn't recognized, try editing the .env file and restarting the node
+
+**BF16 Precision Error:**
+If you see this error:
+```
+ValueError: Your setup doesn't support bf16/gpu. You need torch>=1.10, using Ampere GPU with cuda>=11.0
+```
+
+This means your GPU doesn't support BF16 precision. Solutions:
+
+1. Edit the script to use FP16 instead:
+   ```bash
+   nano ./hivemind_exp/gsm8k/train_single_gpu.py
+   ```
+   Find the training arguments and change `bf16=True` to `fp16=True`
+
+2. Or add this flag to your .env file:
+   ```
+   USE_FP16=True  # Use FP16 instead of BF16
+   ```
+
+3. If you have an older GPU (pre-Ampere), add this to your .env file:
+   ```
+   FORCE_CPU=True  # Use CPU only mode
+   ```
 
 ## Swarm Options
 
