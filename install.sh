@@ -90,7 +90,7 @@ print_header "INSTALLING NODE.JS"
 print_message "Installing Node.js and npm..."
 
 if ! command -v node &> /dev/null; then
-    curl -sSL https://raw.githubusercontent.com/bokiko/gensyn-guide/main/node.sh | bash
+    curl -sSL https://raw.githubusercontent.com/bokiko/RL-Swarm-node/main/node.sh | bash
     
     # Source bashrc to get node in PATH
     export NVM_DIR="$HOME/.nvm"
@@ -125,9 +125,9 @@ if [ "$SKIP_CLONE" != "true" ]; then
     print_header "SETTING UP GENSYN"
     print_message "Cloning Gensyn repository..."
     cd $HOME
-    rm -rf gensyn-testnet
-    git clone https://github.com/bokiko/gensyn-guide.git
-    chmod +x gensyn-guide/gensyn.sh
+    rm -rf RL-Swarm-node
+    git clone https://github.com/bokiko/RL-Swarm-node.git
+    chmod +x RL-Swarm-node/gensyn.sh
 fi
 
 # Create auto-start script
@@ -194,7 +194,7 @@ print_message "Installation completed successfully!"
 print_message ""
 print_message "Next steps:"
 print_message "1. Restart your terminal or run: source ~/.bashrc"
-print_message "2. Run the setup: cd $HOME && ./gensyn-guide/gensyn.sh"
+print_message "2. Run the setup: cd $HOME && ./RL-Swarm-node/gensyn.sh"
 print_message "3. When prompted about Hugging Face Hub, type 'N'"
 print_message "4. After setup, run: ~/backup_gensyn.sh to backup your files"
 print_message ""

@@ -30,7 +30,7 @@ tmux kill-session -t gensyn
 
 ```bash
 cd $HOME
-wget -O update_gensyn.sh https://raw.githubusercontent.com/bokiko/gensyn-guide/main/update.sh
+wget -O update_gensyn.sh https://raw.githubusercontent.com/bokiko/RL-Swarm-node/main/update.sh
 chmod +x update_gensyn.sh
 ./update_gensyn.sh
 ```
@@ -47,9 +47,9 @@ cp -r ~/rl-swarm ~/rl-swarm_backup_$(date +%Y%m%d)
 
 ```bash
 cd $HOME
-rm -rf gensyn-guide
-git clone https://github.com/bokiko/gensyn-guide.git
-chmod +x gensyn-guide/gensyn.sh
+rm -rf RL-Swarm-node
+git clone https://github.com/bokiko/RL-Swarm-node.git
+chmod +x RL-Swarm-node/gensyn.sh
 ```
 
 #### Step 3: Update System Dependencies
