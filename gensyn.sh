@@ -95,7 +95,7 @@ fi
 print_step "Setting up working directory..."
 cd "$HOME"
 
-# Clone or update RL Swarm repository
+# Clone or update the actual Gensyn testnet repository
 if [ -d "rl-swarm" ]; then
     print_warning "Existing rl-swarm directory found."
     read -p "Do you want to remove it and start fresh? (y/N): " -r
@@ -111,11 +111,16 @@ if [ -d "rl-swarm" ]; then
 fi
 
 if [ ! -d "rl-swarm" ]; then
-    print_message "Cloning RL Swarm repository..."
+    print_message "Cloning Gensyn RL Swarm repository..."
     git clone https://github.com/gensyn-ai/rl-swarm.git
     if [ $? -ne 0 ]; then
-        print_error "Failed to clone rl-swarm repository"
-        exit 1
+        print_error "Failed to clone rl-swarm repository. Trying alternative method..."
+        # Try the working repository that actually exists
+        git clone https://github.com/Gensyn-AI/rl-swarm.git || {
+            print_error "Failed to clone from both repositories"
+            print_message "Manual setup required. Please check the official Gensyn documentation."
+            exit 1
+        }
     fi
 fi
 
@@ -153,27 +158,39 @@ pip install --upgrade pip
 print_step "Installing Python dependencies..."
 if [ -f "requirements.txt" ]; then
     pip install -r requirements.txt
+elif [ -f "pyproject.toml" ]; then
+    pip install -e .
 else
-    print_warning "requirements.txt not found. Installing common dependencies..."
+    print_warning "No requirements.txt or pyproject.toml found."
+    print_message "Installing basic dependencies for RL training..."
     pip install torch torchvision torchaudio
     pip install transformers
     pip install datasets
-    pip install hivemind
+    pip install accelerate
     pip install wandb
     pip install numpy pandas matplotlib seaborn
+    pip install protobuf
+    pip install hivemind
 fi
 
 # Install CUDA-specific packages if available
 if [ "$CUDA_AVAILABLE" = true ]; then
-    print_message "Installing CUDA-optimized packages..."
-    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+    print_message "Installing CUDA-optimized PyTorch..."
+    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 fi
 
 print_message "✓ Python dependencies installed"
 
-# Create run script
+# Create run script based on what's actually available
 print_step "Creating run script..."
-cat > run_rl_swarm.sh << 'EOF'
+
+# Check what kind of setup this is
+if [ -f "run_rl_swarm.sh" ]; then
+    print_message "✓ Found existing run_rl_swarm.sh script"
+    chmod +x run_rl_swarm.sh
+elif [ -f "main.py" ]; then
+    print_message "Creating run script for main.py..."
+    cat > run_rl_swarm.sh << 'EOF'
 #!/bin/bash
 
 # Activate virtual environment
@@ -189,11 +206,62 @@ if [ ! -f "swarm.pem" ]; then
     echo "The swarm will generate a new identity."
 fi
 
-# Run the RL swarm
-python -m rl_swarm.main "$@"
+# Run the main script
+python main.py "$@"
 EOF
+    chmod +x run_rl_swarm.sh
+elif [ -f "src/main.py" ]; then
+    print_message "Creating run script for src/main.py..."
+    cat > run_rl_swarm.sh << 'EOF'
+#!/bin/bash
 
-chmod +x run_rl_swarm.sh
+# Activate virtual environment
+source venv/bin/activate
+
+# Set environment variables
+export PYTHONPATH="${PYTHONPATH}:$(pwd)"
+export CUDA_VISIBLE_DEVICES=0
+
+# Check if swarm.pem exists
+if [ ! -f "swarm.pem" ]; then
+    echo "swarm.pem not found. This appears to be a first run."
+    echo "The swarm will generate a new identity."
+fi
+
+# Run the main script
+python src/main.py "$@"
+EOF
+    chmod +x run_rl_swarm.sh
+else
+    print_warning "No standard entry point found. Creating generic run script..."
+    cat > run_rl_swarm.sh << 'EOF'
+#!/bin/bash
+
+# Activate virtual environment
+source venv/bin/activate
+
+# Set environment variables
+export PYTHONPATH="${PYTHONPATH}:$(pwd)"
+export CUDA_VISIBLE_DEVICES=0
+
+echo "Available Python files:"
+find . -name "*.py" -type f | head -10
+
+echo ""
+echo "Please check the repository documentation for the correct run command."
+echo "Common patterns:"
+echo "  python main.py"
+echo "  python -m module_name"
+echo "  python src/main.py"
+echo ""
+echo "Edit this script (run_rl_swarm.sh) with the correct command."
+
+# Uncomment and modify the line below with the correct command
+# python main.py "$@"
+EOF
+    chmod +x run_rl_swarm.sh
+    print_warning "Generic run script created. You may need to edit run_rl_swarm.sh manually."
+fi
 
 print_message "✓ Run script created"
 
@@ -263,4 +331,29 @@ print_message "Starting the swarm now..."
 
 # Start the swarm
 print_step "Launching RL Swarm..."
-./run_rl_swarm.sh
+
+# Check if we have a working run script
+if [ -f "run_rl_swarm.sh" ]; then
+    print_message "Starting the swarm..."
+    print_message "If this is your first run, the system will ask about Hugging Face Hub."
+    print_message "When prompted, type 'N' for no."
+    echo ""
+    
+    # Try to start, but don't exit if it fails
+    ./run_rl_swarm.sh || {
+        print_error "Failed to start automatically."
+        print_message ""
+        print_message "Manual setup may be required. Please check:"
+        print_message "1. Repository structure: ls -la"
+        print_message "2. Available Python files: find . -name '*.py' -type f"
+        print_message "3. Check README.md in the rl-swarm directory for specific instructions"
+        print_message ""
+        print_message "You may need to:"
+        print_message "• Edit run_rl_swarm.sh with the correct command"
+        print_message "• Follow the original repository's setup instructions"
+        print_message "• Install additional dependencies"
+    }
+else
+    print_error "Could not create run script automatically."
+    print_message "Please check the rl-swarm directory and follow the repository's instructions."
+fi
