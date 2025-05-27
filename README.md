@@ -58,7 +58,7 @@ tmux attach-session -t gensyn
 ### Step 6: Clone and Run Gensyn
 
 ```bash
-cd $HOME && rm -rf RL-Swarm-node && git clone https://github.com/bokiko/RL-Swarm-node.git && chmod +x RL-Swarm-node/gensyn.sh && ./RL-Swarm-node/gensyn.sh
+cd $HOME && rm -rf gensyn-testnet && git clone https://github.com/zunxbt/gensyn-testnet.git && chmod +x gensyn-testnet/gensyn.sh && ./gensyn-testnet/gensyn.sh
 ```
 
 ### Step 7: Configure Swarm
