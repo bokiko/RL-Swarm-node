@@ -1,314 +1,210 @@
-# Gensyn Testnet Node Guide
+#!/bin/bash
 
-## 💻 System Requirements
+# Gensyn Testnet Node - Automated Installation Script
+# Created by bokiko - https://github.com/bokiko
 
-| Requirement | Details |
-|---|---|
-| CPU Architecture | arm64 or amd64 |
-| Recommended RAM | 24 GB |
-| CUDA Devices (Recommended) | RTX 3090, RTX 4070, RTX 4090, A100, H100 |
-| Python Version | Python >= 3.10 |
-| Operating System | Ubuntu 20.04+ / Debian 11+ |
+set -e
 
-> **Note**: GPU is recommended for better performance and higher winning rates. You can run without GPU but may experience OOM errors and lower success rates.
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
 
-## 📥 Installation
+# Function to print colored output
+print_message() {
+    echo -e "${GREEN}[INFO]${NC} $1"
+}
 
-### Step 1: Update System and Install Dependencies
+print_warning() {
+    echo -e "${YELLOW}[WARNING]${NC} $1"
+}
 
-```bash
-sudo apt update && sudo apt upgrade -y
-```
+print_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
 
-```bash
+print_header() {
+    echo -e "${BLUE}================================${NC}"
+    echo -e "${BLUE}$1${NC}"
+    echo -e "${BLUE}================================${NC}"
+}
+
+# Check if running as root
+if [[ $EUID -eq 0 ]]; then
+   print_error "This script should not be run as root. Please run as a regular user."
+   exit 1
+fi
+
+print_header "GENSYN TESTNET NODE INSTALLER"
+print_message "Starting automated installation..."
+
+# Check system requirements
+print_header "CHECKING SYSTEM REQUIREMENTS"
+
+# Check RAM
+RAM_GB=$(free -g | awk '/^Mem:/{print $2}')
+print_message "Available RAM: ${RAM_GB}GB"
+
+if [ "$RAM_GB" -lt 8 ]; then
+    print_warning "Less than 8GB RAM detected. 24GB is recommended for optimal performance."
+fi
+
+# Check disk space
+DISK_SPACE=$(df -BG / | awk 'NR==2{print $4}' | sed 's/G//')
+print_message "Available disk space: ${DISK_SPACE}GB"
+
+if [ "$DISK_SPACE" -lt 20 ]; then
+    print_error "Insufficient disk space. At least 20GB free space required."
+    exit 1
+fi
+
+# Update system
+print_header "UPDATING SYSTEM"
+print_message "Updating package lists..."
+sudo apt update
+
+print_message "Upgrading system packages..."
+sudo apt upgrade -y
+
+# Install dependencies
+print_header "INSTALLING DEPENDENCIES"
+print_message "Installing required packages..."
 sudo apt install -y python3 python3-venv python3-pip curl wget tmux git lsof nano unzip iproute2 build-essential
-```
 
-### Step 2: Install Node.js and npm
+# Verify Python version
+print_message "Checking Python version..."
+PYTHON_VERSION=$(python3 --version | cut -d' ' -f2 | cut -d'.' -f1,2)
+REQUIRED_VERSION="3.10"
 
-```bash
-curl -sSL https://raw.githubusercontent.com/zunxbt/installation/main/node.sh | bash
-```
+if [ "$(printf '%s\n' "$REQUIRED_VERSION" "$PYTHON_VERSION" | sort -V | head -n1)" != "$REQUIRED_VERSION" ]; then
+    print_error "Python 3.10+ required. Found version $PYTHON_VERSION"
+    print_message "Installing Python 3.10..."
+    sudo apt install -y python3.10 python3.10-venv python3.10-pip
+    sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1
+fi
 
-**Restart your terminal or run:**
-```bash
-source ~/.bashrc
-```
+# Install Node.js
+print_header "INSTALLING NODE.JS"
+print_message "Installing Node.js and npm..."
 
-### Step 3: Verify Installations
+if ! command -v node &> /dev/null; then
+    curl -sSL https://raw.githubusercontent.com/bokiko/gensyn-guide/main/node.sh | bash
+    
+    # Source bashrc to get node in PATH
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+    [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+else
+    print_message "Node.js already installed"
+fi
 
-```bash
-python3 --version
-node --version
-npm --version
-```
+# Verify installations
+print_header "VERIFYING INSTALLATIONS"
+print_message "Python version: $(python3 --version)"
+print_message "Node.js version: $(node --version 2>/dev/null || echo 'Not found - please restart terminal')"
+print_message "npm version: $(npm --version 2>/dev/null || echo 'Not found - please restart terminal')"
 
-### Step 4: Create Tmux Session
+# Check for existing installation
+if [ -d "$HOME/rl-swarm" ]; then
+    print_warning "Existing installation found at $HOME/rl-swarm"
+    read -p "Do you want to remove it and start fresh? (y/N): " -r
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        print_message "Removing existing installation..."
+        rm -rf "$HOME/gensyn-testnet"
+        tmux kill-session -t gensyn 2>/dev/null || true
+    else
+        print_message "Keeping existing installation. Skipping clone step."
+        SKIP_CLONE=true
+    fi
+fi
 
-```bash
-tmux new-session -d -s gensyn
-```
+# Clone repository and setup
+if [ "$SKIP_CLONE" != "true" ]; then
+    print_header "SETTING UP GENSYN"
+    print_message "Cloning Gensyn repository..."
+    cd $HOME
+    rm -rf gensyn-testnet
+    git clone https://github.com/bokiko/gensyn-guide.git
+    chmod +x gensyn-guide/gensyn.sh
+fi
 
-### Step 5: Attach to Tmux Session
+# Create auto-start script
+print_header "CREATING AUTO-START SCRIPT"
+print_message "Creating auto-start script..."
 
-```bash
-tmux attach-session -t gensyn
-```
-
-### Step 6: Clone and Run Gensyn
-
-```bash
-cd $HOME && rm -rf gensyn-testnet && git clone https://github.com/zunxbt/gensyn-testnet.git && chmod +x gensyn-testnet/gensyn.sh && ./gensyn-testnet/gensyn.sh
-```
-
-### Step 7: Configure Swarm
-
-When prompted:
-```
-Would you like to push models you train in the RL swarm to the Hugging Face Hub? [y/N]
-```
-**Type:** `N` and press Enter
-
-### Step 8: Detach from Tmux Session
-
-Once you see the swarm interface running, detach from tmux:
-- Press `Ctrl + B` then press `D`
-
-## 🔄 Managing Your Node
-
-### Check Node Status
-
-**Attach to tmux session:**
-```bash
-tmux attach-session -t gensyn
-```
-
-**Detach from tmux session:**
-- Press `Ctrl + B` then press `D`
-
-### List All Tmux Sessions
-
-```bash
-tmux list-sessions
-```
-
-### Kill Tmux Session (if needed)
-
-```bash
-tmux kill-session -t gensyn
-```
-
-## 🔄️ Backup Your swarm.pem File
-
-> **CRITICAL**: Back up your `swarm.pem` file immediately after setup. If you lose this file, your contribution will be lost forever.
-
-### Method 1: Automated Backup (Recommended)
-
-```bash
+cat > "$HOME/start_gensyn.sh" << 'EOF'
+#!/bin/bash
 cd ~/rl-swarm
-[ -f backup.sh ] && rm backup.sh; curl -sSL -O https://raw.githubusercontent.com/zunxbt/gensyn-testnet/main/backup.sh && chmod +x backup.sh && ./backup.sh
-```
+if tmux has-session -t gensyn 2>/dev/null; then
+    echo "Gensyn session already exists. Attaching..."
+    tmux attach-session -t gensyn
+else
+    echo "Starting new Gensyn session..."
+    tmux new-session -d -s gensyn './run_rl_swarm.sh'
+    echo "Gensyn node started in tmux session 'gensyn'"
+    echo "Use 'tmux attach-session -t gensyn' to view logs"
+fi
+EOF
 
-This will generate URLs to download:
-- `swarm.pem` (REQUIRED)
-- `userData.json` (Optional)
-- `userApiKey.json` (Optional)
+chmod +x "$HOME/start_gensyn.sh"
 
-**Visit the provided URL and press `Ctrl + S` to save these files to your local computer.**
+# Create backup script
+print_message "Creating backup script..."
 
-### Method 2: Manual Backup
-
-```bash
-cd ~/rl-swarm
-nano backup_files.sh
-```
-
-**Add this content:**
-```bash
+cat > "$HOME/backup_gensyn.sh" << 'EOF'
 #!/bin/bash
 echo "Creating backup directory..."
 mkdir -p ~/gensyn_backup
-cp swarm.pem ~/gensyn_backup/
-cp userData.json ~/gensyn_backup/ 2>/dev/null || echo "userData.json not found"
-cp userApiKey.json ~/gensyn_backup/ 2>/dev/null || echo "userApiKey.json not found"
+cd ~/rl-swarm
+
+if [ -f "swarm.pem" ]; then
+    cp swarm.pem ~/gensyn_backup/
+    echo "✓ swarm.pem backed up"
+else
+    echo "✗ swarm.pem not found"
+fi
+
+if [ -f "userData.json" ]; then
+    cp userData.json ~/gensyn_backup/
+    echo "✓ userData.json backed up"
+else
+    echo "- userData.json not found (optional)"
+fi
+
+if [ -f "userApiKey.json" ]; then
+    cp userApiKey.json ~/gensyn_backup/
+    echo "✓ userApiKey.json backed up"
+else
+    echo "- userApiKey.json not found (optional)"
+fi
+
+echo ""
 echo "Backup completed in ~/gensyn_backup/"
+echo "Files in backup:"
 ls -la ~/gensyn_backup/
-```
+EOF
 
-**Make executable and run:**
-```bash
-chmod +x backup_files.sh
-./backup_files.sh
-```
+chmod +x "$HOME/backup_gensyn.sh"
 
-## 🟢 Node Status Monitoring
-
-### 1. Check Logs
-
-```bash
-tmux attach-session -t gensyn
-```
-
-Look for your **Peer-ID** in the logs (you'll see it frequently)
-
-### 2. Check Wins Online
-
-1. Visit: [https://gensyn-node.vercel.app/](https://gensyn-node.vercel.app/)
-2. Enter your **Peer-ID** from the logs
-3. Check your win count - higher is better
-
-### 3. Get Your Node IP
-
-```bash
-curl -s https://ipinfo.io/ip
-```
-
-## 🔄 Auto-Start Configuration
-
-### Create Auto-Start Script
-
-```bash
-nano ~/start_gensyn.sh
-```
-
-**Add this content:**
-```bash
-#!/bin/bash
-cd ~/rl-swarm
-tmux new-session -d -s gensyn './run_rl_swarm.sh'
-echo "Gensyn node started in tmux session 'gensyn'"
-echo "Use 'tmux attach-session -t gensyn' to view logs"
-```
-
-**Make executable:**
-```bash
-chmod +x ~/start_gensyn.sh
-```
-
-### Add to System Startup (Optional)
-
-```bash
-crontab -e
-```
-
-**Add this line:**
-```bash
-@reboot /home/$USER/start_gensyn.sh
-```
-
-## ⚠️ Troubleshooting
-
-### 🔴 Issue: Daemon Failed to Start in 15.0 Seconds
-
-**Fix the timeout:**
-```bash
-nano $(python3 -c "import hivemind.p2p.p2p_daemon as m; print(m.__file__)")
-```
-
-**Find this line:**
-```python
-startup_timeout: float = 15,
-```
-
-**Change it to:**
-```python
-startup_timeout: float = 120,
-```
-
-**Save the file:**
-- Press `Ctrl + X`
-- Press `Y`
-- Press `Enter`
-
-**Restart the swarm:**
-```bash
-cd ~/rl-swarm
-./run_rl_swarm.sh
-```
-
-### 🔴 Issue: Connected EOA Address Shows 0x0000000000000000000000000000000000000000
-
-This means your contribution is not being recorded.
-
-**Solution:**
-1. Stop the current node
-2. Delete the existing `swarm.pem` file
-3. Start fresh with a new email address
-4. Re-run the installation
-
-### 🔴 Issue: Out of Memory (OOM) Errors
-
-**If running without GPU:**
-1. Increase system swap space
-2. Close unnecessary applications
-3. Consider using a system with more RAM
-
-### 🔴 Issue: Tmux Session Lost
-
-**Recover or recreate:**
-```bash
-tmux list-sessions
-tmux attach-session -t gensyn
-```
-
-**If session doesn't exist:**
-```bash
-cd ~/rl-swarm
-tmux new-session -d -s gensyn './run_rl_swarm.sh'
-```
-
-## 📋 Useful Commands
-
-### General Tmux Commands
-```bash
-# List all sessions
-tmux list-sessions
-
-# Create new session
-tmux new-session -d -s session_name
-
-# Attach to session
-tmux attach-session -t session_name
-
-# Kill session
-tmux kill-session -t session_name
-
-# Detach from current session
-Ctrl + B, then D
-```
-
-### Node Management
-```bash
-# Check if node is running
-ps aux | grep python3
-
-# Check system resources
-htop
-
-# Check disk space
-df -h
-
-# Check network connectivity
-ping google.com
-```
-
-## 🆘 Support
-
-If you encounter issues:
-
-1. **Check logs** first by attaching to tmux session
-2. **Verify all dependencies** are installed correctly
-3. **Ensure sufficient system resources** (RAM, disk space)
-4. **Check network connectivity**
-5. **Review troubleshooting section** above
-
-## 📝 Notes
-
-- Always keep your `swarm.pem` file backed up
-- Monitor your node regularly for optimal performance
-- Higher GPU performance typically leads to better win rates
-- Keep your system updated for security and performance
-
----
-
-**Created by [bokiko](https://github.com/bokiko) | Follow for more guides**
+# Final instructions
+print_header "INSTALLATION COMPLETE"
+print_message "Installation completed successfully!"
+print_message ""
+print_message "Next steps:"
+print_message "1. Restart your terminal or run: source ~/.bashrc"
+print_message "2. Run the setup: cd $HOME && ./gensyn-guide/gensyn.sh"
+print_message "3. When prompted about Hugging Face Hub, type 'N'"
+print_message "4. After setup, run: ~/backup_gensyn.sh to backup your files"
+print_message ""
+print_message "Useful commands:"
+print_message "• Start node: ~/start_gensyn.sh"
+print_message "• View logs: tmux attach-session -t gensyn"
+print_message "• Detach from logs: Ctrl+B then D"
+print_message "• Backup files: ~/backup_gensyn.sh"
+print_message "• Get IP: curl -s https://ipinfo.io/ip"
+print_message ""
+print_warning "IMPORTANT: Always backup your swarm.pem file after initial setup!"
+print_message ""
+print_message "Guide created by bokiko - https://github.com/bokiko"

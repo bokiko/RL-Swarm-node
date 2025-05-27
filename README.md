@@ -27,7 +27,7 @@ sudo apt install -y python3 python3-venv python3-pip curl wget tmux git lsof nan
 ### Step 2: Install Node.js and npm
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/zunxbt/installation/main/node.sh | bash
+curl -sSL https://raw.githubusercontent.com/bokiko/gensyn-guide/main/node.sh | bash
 ```
 
 **Restart your terminal or run:**
@@ -58,7 +58,7 @@ tmux attach-session -t gensyn
 ### Step 6: Clone and Run Gensyn
 
 ```bash
-cd $HOME && rm -rf gensyn-testnet && git clone https://github.com/zunxbt/gensyn-testnet.git && chmod +x gensyn-testnet/gensyn.sh && ./gensyn-testnet/gensyn.sh
+cd $HOME && rm -rf gensyn-testnet && git clone https://github.com/bokiko/gensyn-guide.git && chmod +x gensyn-guide/gensyn.sh && ./gensyn-guide/gensyn.sh
 ```
 
 ### Step 7: Configure Swarm
@@ -106,7 +106,7 @@ tmux kill-session -t gensyn
 
 ```bash
 cd ~/rl-swarm
-[ -f backup.sh ] && rm backup.sh; curl -sSL -O https://raw.githubusercontent.com/zunxbt/gensyn-testnet/main/backup.sh && chmod +x backup.sh && ./backup.sh
+[ -f backup.sh ] && rm backup.sh; curl -sSL -O https://raw.githubusercontent.com/bokiko/gensyn-guide/main/backup.sh && chmod +x backup.sh && ./backup.sh
 ```
 
 This will generate URLs to download:

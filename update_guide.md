@@ -47,9 +47,9 @@ cp -r ~/rl-swarm ~/rl-swarm_backup_$(date +%Y%m%d)
 
 ```bash
 cd $HOME
-rm -rf gensyn-testnet
-git clone https://github.com/zunxbt/gensyn-testnet.git
-chmod +x gensyn-testnet/gensyn.sh
+rm -rf gensyn-guide
+git clone https://github.com/bokiko/gensyn-guide.git
+chmod +x gensyn-guide/gensyn.sh
 ```
 
 #### Step 3: Update System Dependencies
@@ -91,7 +91,7 @@ chmod 600 ~/rl-swarm/swarm.pem
 ### Update Node.js
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/zunxbt/installation/main/node.sh | bash
+curl -sSL https://raw.githubusercontent.com/bokiko/gensyn-guide/main/node.sh | bash
 source ~/.bashrc
 ```
 
